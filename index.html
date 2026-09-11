@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yuviik Game Stop</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#101217;color:#f5f5f5}
+header{padding:18px 22px;background:#171a21;border-bottom:1px solid #2a2e38;display:flex;justify-content:space-between;align-items:center}
+h1{margin:0;font-size:25px}.sub{color:#9da4b2;font-size:13px;margin-top:4px}
+.wrap{max-width:1100px;margin:auto;padding:20px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.stat,.card{background:#181b22;border:1px solid #2a2e38;border-radius:14px;padding:18px}.stat b{display:block;font-size:26px;margin-top:7px}.muted{color:#9da4b2;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card h2{margin:0 0 8px;font-size:18px}.status{font-size:13px;margin-bottom:15px;color:#69e29b}
+.timer{font-size:31px;font-weight:bold;letter-spacing:1px}.amount{font-size:21px;margin:10px 0 15px}.rate{color:#aab0bc;font-size:13px}
+button{width:100%;border:0;border-radius:9px;padding:12px;font-size:15px;font-weight:bold;cursor:pointer;background:#e9edf3;color:#111}
+button.stop{background:#d9dde5}.history{margin-top:20px}.history table{width:100%;border-collapse:collapse;font-size:14px}.history th,.history td{text-align:left;padding:11px;border-bottom:1px solid #2a2e38}.history th{color:#9da4b2}
+@media(max-width:700px){.stats{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.wrap{padding:12px}header{padding:15px}.timer{font-size:28px}}
+</style>
+</head>
+<body>
+<header><div><h1>YUVIIK GAME STOP</h1><div class="sub">Gaming Timer & Billing</div></div><div class="muted" id="date"></div></header>
+<div class="wrap">
+<div class="stats">
+  <div class="stat"><span class="muted">Running Sessions</span><b id="running">0</b></div>
+  <div class="stat"><span class="muted">Today's Collection</span><b id="collection">₹0</b></div>
+  <div class="stat"><span class="muted">Today's Sessions</span><b id="sessions">0</b></div>
+</div>
+<div class="grid" id="stations"></div>
+<div class="card history"><h2>Session History</h2>
+<table><thead><tr><th>Station</th><th>Start</th><th>End</th><th>Duration</th><th>Amount</th></tr></thead>
+<tbody id="history"></tbody></table></div>
+</div>
+<script>
+const config=[
+{id:"PS2-01",type:"PS2",rate:35,players:4},{id:"PS2-02",type:"PS2",rate:35,players:4},{id:"PS4-01",type:"PS4",rate:40,players:4}
+];
+let playerNames=JSON.parse(localStorage.getItem("ygs_player_names")||"{}");
+let sessions=JSON.parse(localStorage.getItem("ygs_sessions")||"[]");
+let running=JSON.parse(localStorage.getItem("ygs_running")||"{}");
+const money=n=>"₹"+Math.ceil(n);
+function duration(ms){let s=Math.floor(ms/1000),h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60);s%=60;return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")}
+function render(){
+document.getElementById("stations").innerHTML=config.map(x=>{
+ let r=running[x.id];
+ let players = r ? r.players : Array.from({length:x.players},(_,i)=>({start:null,active:false}));
+ let rows=players.map((pl,i)=>{
+   let ms=pl.active?Date.now()-pl.start:0;
+   let amt=pl.active?(ms/3600000*x.rate):0;
+   let key=x.id+"-"+i, name=playerNames[key]||("Player "+(i+1));
+   return `<div style="border-top:1px solid #2a2e38;padding:12px 0">
+     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+       <b>${name}</b><button style="width:auto;padding:7px 10px;font-size:12px" onclick="editPlayerName('${x.id}',${i})">EDIT NAME</button>
+       <span class="${pl.active?'status':'muted'}">${pl.active?'RUNNING':'STOPPED'}</span>
+     </div>
+     <div class="timer" style="font-size:23px">${duration(ms)}</div>
+     <div class="amount" style="font-size:18px">${money(amt)}</div>
+     <button class="${pl.active?'stop':''}" onclick="${pl.active?`stopPlayer('${x.id}',${i})`:`startPlayer('${x.id}',${i})`}">${pl.active?'STOP PLAYER':'START PLAYER'}</button>
+   </div>`;
+ }).join("");
+ return `<div class="card"><h2>${x.id} · ${x.type}</h2>
+ <div class="rate">Up to ${x.players} players · ₹${x.rate}/hour per player</div>${rows}
+ <button style="margin-top:10px" onclick="startAll('${x.id}')">START ALL PLAYERS</button></div>`
+}).join("");
+let total=sessions.reduce((a,s)=>a+s.amount,0);
+document.getElementById("running").textContent=Object.keys(running).length;
+document.getElementById("collection").textContent=money(total);
+document.getElementById("sessions").textContent=sessions.length;
+document.getElementById("history").innerHTML=sessions.slice().reverse().map(s=>`<tr><td>${s.id}</td><td>${new Date(s.start).toLocaleTimeString()}</td><td>${new Date(s.end).toLocaleTimeString()}</td><td>${duration(s.end-s.start)}</td><td>${money(s.amount)}</td></tr>`).join("");
+localStorage.setItem("ygs_running",JSON.stringify(running));localStorage.setItem("ygs_sessions",JSON.stringify(sessions));
+}
+function editPlayerName(id,i){
+ let key=id+"-"+i, current=playerNames[key]||("Player "+(i+1));
+ let name=prompt("Player ka naam likhiye:",current);
+ if(name!==null && name.trim()){playerNames[key]=name.trim();localStorage.setItem("ygs_player_names",JSON.stringify(playerNames));render();}
+}
+function startSession(id){startAll(id)}
+function stopSession(id){let r=running[id]; if(r) r.players.forEach((_,i)=>stopPlayer(id,i))}
+function startAll(id){let x=config.find(a=>a.id===id); running[id]={players:Array.from({length:x.players},()=>({start:Date.now(),active:true}))};render()}
+function startPlayer(id,i){
+ let x=config.find(a=>a.id===id);
+ if(!running[id]) running[id]={players:Array.from({length:x.players},()=>({start:null,active:false}))};
+ running[id].players[i]={start:Date.now(),active:true}; render();
+}
+function stopPlayer(id,i){
+ let r=running[id], x=config.find(a=>a.id===id), pl=r.players[i]; if(!pl.active)return;
+ let end=Date.now(), amount=Math.ceil((end-pl.start)/3600000*x.rate);
+ sessions.push({id:id+" / P"+(i+1),start:pl.start,end,amount});
+ r.players[i]={start:null,active:false};
+ if(!r.players.some(p=>p.active)) delete running[id];
+ render();
+}
+document.getElementById("date").textContent=new Date().toLocaleDateString();
+render();setInterval(render,1000);
+</script>
+</body></html>
