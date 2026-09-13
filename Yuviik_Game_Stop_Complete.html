@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yuviik Game Stop</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#0e1015;color:#f5f7fb}
+header{padding:16px 22px;background:#171a21;border-bottom:1px solid #2a2e38;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+h1,h2,h3{margin:0}.sub,.muted{color:#9da4b2;font-size:13px}.wrap{max-width:1250px;margin:auto;padding:18px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}nav button{width:auto;padding:10px 15px}
+nav button.active{background:#fff;color:#111}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.stat,.card{background:#181b22;border:1px solid #2a2e38;border-radius:14px;padding:16px}.stat b{display:block;font-size:25px;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.card h2{font-size:18px;margin-bottom:8px}
+.timer{font-size:30px;font-weight:bold;letter-spacing:1px;margin:8px 0}.amount{font-size:20px;margin:7px 0 12px}.rate{font-size:13px;color:#aab0bc}
+.status{color:#69e29b;font-size:13px}.paused{color:#f2c86b;font-size:13px}
+button{border:0;border-radius:9px;padding:11px 13px;font-size:14px;font-weight:bold;cursor:pointer;background:#e9edf3;color:#111}
+button.stop{background:#d9dde5}.danger{background:#d96b6b!important;color:white}.controls{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:8px}
+input,select{width:100%;padding:11px;border-radius:9px;border:1px solid #343945;background:#11141a;color:#fff}
+.formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}
+.section{display:none}.section.show{display:block}.list{display:grid;gap:10px;margin-top:12px}.item{border:1px solid #2a2e38;border-radius:10px;padding:12px;background:#14171d}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px;border-bottom:1px solid #2a2e38}th{color:#9da4b2}
+.modal{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;z-index:20}.modal.show{display:flex}.modalbox{width:min(440px,92vw);background:#181b22;border:1px solid #343945;border-radius:15px;padding:20px}.modalbox>*{margin-bottom:10px}
+.badge{display:inline-block;padding:4px 8px;border-radius:20px;background:#2a2e38;font-size:12px}
+@media(max-width:850px){.grid{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr}}
+@media(max-width:600px){.grid,.stats{grid-template-columns:1fr}.wrap{padding:10px}header{padding:13px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>YUVIIK GAME STOP</h1><div class="sub">Gaming Center Management System</div></div>
+  <div class="row" style="flex:0 0 auto"><span class="muted" id="date"></span><button onclick="logout()">LOGOUT</button></div>
+</header>
+
+<div class="wrap">
+<nav>
+ <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
+ <button onclick="showTab('games',this)">Game List</button>
+ <button onclick="showTab('booking',this)">Booking</button>
+ <button onclick="showTab('payment',this)">Payment</button>
+ <button onclick="showTab('history',this)">History</button>
+</nav>
+
+<section id="dashboard" class="section show">
+ <div class="stats">
+  <div class="stat"><span class="muted">Running Sessions</span><b id="runningCount">0</b></div>
+  <div class="stat"><span class="muted">Today's Collection</span><b id="collection">₹0</b></div>
+  <div class="stat"><span class="muted">Today's Sessions</span><b id="sessionCount">0</b></div>
+  <div class="stat"><span class="muted">Pending Payments</span><b id="pendingCount">0</b></div>
+ </div>
+
+ <div class="card" style="margin-bottom:14px">
+  <h2>Add Timer / Station</h2>
+  <div class="formgrid" style="margin-top:10px">
+   <select id="newType"><option>PS2</option><option>PS4</option></select>
+   <input id="newRate" type="number" min="1" value="35" placeholder="₹ per hour">
+   <input id="newPlayers" type="number" min="1" value="4" placeholder="Players">
+  </div>
+  <button style="margin-top:10px" onclick="addTimer()">＋ ADD TIMER</button>
+ </div>
+ <div class="grid" id="stations"></div>
+</section>
+
+<section id="games" class="section">
+ <div class="card">
+  <h2>Game List</h2>
+  <div class="formgrid" style="margin-top:12px">
+   <input id="gameName" placeholder="Game name (e.g. GTA V)">
+   <select id="gameType"><option>PS2</option><option>PS4</option></select>
+   <button onclick="addGame()">＋ ADD GAME</button>
+  </div>
+  <div class="list" id="gameList"></div>
+ </div>
+</section>
+
+<section id="booking" class="section">
+ <div class="card">
+  <h2>Booking</h2>
+  <div class="formgrid" style="margin-top:12px">
+   <input id="bookName" placeholder="Customer name">
+   <input id="bookPhone" placeholder="Phone">
+   <select id="bookStation"></select>
+  </div>
+  <div class="formgrid" style="margin-top:10px">
+   <input id="bookDate" type="date">
+   <input id="bookTime" type="time">
+   <input id="bookHours" type="number" min="1" value="1" placeholder="Hours">
+  </div>
+  <button style="margin-top:10px" onclick="addBooking()">＋ CREATE BOOKING</button>
+  <div class="list" id="bookingList"></div>
+ </div>
+</section>
+
+<section id="payment" class="section">
+ <div class="card">
+  <h2>Payment & Billing</h2>
+  <div class="formgrid" style="margin-top:12px">
+   <select id="paymentSession"></select>
+   <select id="paymentMethod"><option>Cash</option><option>UPI</option><option>Card</option></select>
+   <button onclick="markPaid()">✓ MARK PAID</button>
+  </div>
+  <div class="list" id="paymentList"></div>
+ </div>
+</section>
+
+<section id="history" class="section">
+ <div class="card">
+  <h2>Session History</h2>
+  <table><thead><tr><th>Station</th><th>Game</th><th>Start</th><th>End</th><th>Duration</th><th>Amount</th><th>Payment</th></tr></thead>
+  <tbody id="historyTable"></tbody></table>
+ </div>
+</section>
+</div>
+
+<div class="modal" id="loginModal">
+ <div class="modalbox">
+  <h2>Yuviik Game Stop Login</h2>
+  <div class="muted">Demo admin login: admin / admin123</div>
+  <input id="loginUser" placeholder="Username">
+  <input id="loginPass" type="password" placeholder="Password">
+  <button onclick="login()" style="width:100%">LOGIN</button>
+  <div id="loginMsg" class="muted"></div>
+ </div>
+</div>
+
+<script>
+const money=n=>"₹"+Math.ceil(Number(n)||0);
+const dur=ms=>{let s=Math.floor(ms/1000),h=Math.floor(s/3600);s%=3600;let m=Math.floor(s/60);s%=60;return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")};
+
+let config=JSON.parse(localStorage.getItem("ygs_config")||"null")||[
+ {id:"PS2-01",type:"PS2",rate:35,players:4},
+ {id:"PS2-02",type:"PS2",rate:35,players:4},
+ {id:"PS4-01",type:"PS4",rate:40,players:4}
+];
+let games=JSON.parse(localStorage.getItem("ygs_games")||"null")||[
+ {id:1,name:"GTA San Andreas",type:"PS2"},{id:2,name:"God of War II",type:"PS2"},
+ {id:3,name:"GTA V",type:"PS4"},{id:4,name:"FIFA",type:"PS4"},{id:5,name:"Call of Duty",type:"PS4"}
+];
+let bookings=JSON.parse(localStorage.getItem("ygs_bookings")||"[]");
+let sessions=JSON.parse(localStorage.getItem("ygs_sessions")||"[]");
+let running=JSON.parse(localStorage.getItem("ygs_running")||"{}");
+
+function save(){
+ localStorage.setItem("ygs_config",JSON.stringify(config));
+ localStorage.setItem("ygs_games",JSON.stringify(games));
+ localStorage.setItem("ygs_bookings",JSON.stringify(bookings));
+ localStorage.setItem("ygs_sessions",JSON.stringify(sessions));
+ localStorage.setItem("ygs_running",JSON.stringify(running));
+}
+function showTab(id,btn){
+ document.querySelectorAll(".section").forEach(x=>x.classList.remove("show"));
+ document.getElementById(id).classList.add("show");
+ document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));
+ btn.classList.add("active");
+ render();
+}
+function ensureRunning(id){
+ let x=config.find(a=>a.id===id);
+ if(!running[id]) running[id]={players:Array.from({length:x.players},()=>({start:null,active:false,elapsed:0,game:""}))};
+ return running[id];
+}
+function startPlayer(id,i){
+ let r=ensureRunning(id),p=r.players[i];
+ r.players[i]={start:Date.now(),active:true,elapsed:p.elapsed||0,game:p.game||""};save();render();
+}
+function pausePlayer(id,i){
+ let p=running[id]?.players[i];if(!p?.active)return;
+ p.elapsed=(p.elapsed||0)+Date.now()-p.start;p.start=null;p.active=false;save();render();
+}
+function resumePlayer(id,i){let p=running[id]?.players[i];if(!p||p.active)return;p.start=Date.now();p.active=true;save();render()}
+function playPlayer(id,i){resumePlayer(id,i)}
+function stopPlayer(id,i){
+ let r=running[id],x=config.find(a=>a.id===id),p=r?.players[i];if(!p)return;
+ let end=Date.now(),elapsed=(p.elapsed||0)+(p.active&&p.start?end-p.start:0);if(elapsed<=0)return;
+ let amount=Math.ceil(elapsed/3600000*x.rate);
+ sessions.push({id:id+" / P"+(i+1),station:id,player:i+1,game:p.game||"Not selected",start:end-elapsed,end,amount,paid:false,method:""});
+ r.players[i]={start:null,active:false,elapsed:0,game:""};
+ if(!r.players.some(q=>q.active||q.elapsed>0))delete running[id];
+ save();render();
+}
+function startAll(id){let r=ensureRunning(id);r.players.forEach((p,i)=>{if(!p.active&&!p.elapsed)startPlayer(id,i)});render()}
+function selectGame(id,i){
+ let r=ensureRunning(id),p=r.players[i];
+ if(!p.active&&!p.elapsed){alert("Timer start karke hi game add/select kar sakte hain.");return}
+ let opts=games.filter(g=>g.type===config.find(x=>x.id===id).type);
+ if(!opts.length){alert("Is console ke liye Game List me game add karein.");return}
+ let list=opts.map((g,n)=>(n+1)+". "+g.name).join("\\n");
+ let n=prompt("Game number select karein:\\n"+list);
+ let g=opts[Number(n)-1];if(g){p.game=g.name;save();render()}
+}
+function addTimer(){
+ let type=newType.value,rate=Math.max(1,Number(newRate.value)||35),players=Math.max(1,Number(newPlayers.value)||4);
+ let nums=config.filter(x=>x.type===type).map(x=>parseInt(x.id.split("-")[1])).filter(Number.isFinite);
+ let n=(nums.length?Math.max(...nums):0)+1;
+ config.push({id:type+"-"+String(n).padStart(2,"0"),type,rate,players});save();render();
+}
+function addGame(){
+ let name=gameName.value.trim();if(!name)return alert("Game name likhiye.");
+ games.push({id:Date.now(),name,type:gameType.value});gameName.value="";save();render();
+}
+function deleteGame(id){games=games.filter(g=>g.id!==id);save();render()}
+function addBooking(){
+ let name=bookName.value.trim();if(!name)return alert("Customer name likhiye.");
+ bookings.push({id:Date.now(),name,phone:bookPhone.value.trim(),station:bookStation.value,date:bookDate.value,time:bookTime.value,hours:Number(bookHours.value)||1,status:"Booked"});
+ bookName.value="";bookPhone.value="";save();render();
+}
+function cancelBooking(id){let b=bookings.find(x=>x.id===id);if(b)b.status="Cancelled";save();render()}
+function markPaid(){
+ let id=Number(paymentSession.value),s=sessions.find(x=>x.idNum===id);
+ if(!s)return;
+ s.paid=true;s.method=paymentMethod.value;save();render();alert("Payment marked as paid.");
+}
+function openPay(id){paymentSession.value=String(id);showTabByName("payment")}
+function showTabByName(id){
+ let btn=[...document.querySelectorAll("nav button")].find(b=>b.textContent.toLowerCase().includes(id));
+ if(btn)showTab(id,btn)
+}
+function render(){
+ document.getElementById("date").textContent=new Date().toLocaleDateString();
+ let total=sessions.filter(s=>new Date(s.end).toDateString()===new Date().toDateString()).reduce((a,s)=>a+s.amount,0);
+ document.getElementById("runningCount").textContent=Object.values(running).filter(r=>r.players.some(p=>p.active)).length;
+ document.getElementById("collection").textContent=money(total);
+ document.getElementById("sessionCount").textContent=sessions.length;
+ document.getElementById("pendingCount").textContent=sessions.filter(s=>!s.paid).length;
+
+ document.getElementById("stations").innerHTML=config.map(x=>{
+  let r=running[x.id],players=r?r.players:Array.from({length:x.players},()=>({start:null,active:false,elapsed:0,game:""}));
+  let rows=players.map((p,i)=>{
+   let ms=p.active?(p.elapsed||0)+Date.now()-p.start:(p.elapsed||0),amt=ms/3600000*x.rate;
+   return `<div class="item">
+    <div class="row"><b>Player ${i+1}</b><span class="${p.active?"status":p.elapsed?"paused":"muted"}">${p.active?"RUNNING":p.elapsed?"PAUSED":"STOPPED"}</span></div>
+    <div class="timer">${dur(ms)}</div><div class="amount">${money(amt)}</div>
+    <div class="muted">Game: <b>${p.game||"Not selected"}</b></div>
+    <div class="controls">
+     ${!p.active&&!p.elapsed?`<button onclick="startPlayer('${x.id}',${i})">▶ START</button>`:""}
+     ${p.active?`<button onclick="pausePlayer('${x.id}',${i})">⏸ PAUSE</button>`:""}
+     ${!p.active&&p.elapsed?`<button onclick="resumePlayer('${x.id}',${i})">▶ RESUME</button>`:""}
+     ${p.active?`<button onclick="playPlayer('${x.id}',${i})">⏯ PLAY</button>`:""}
+     ${(p.active||p.elapsed)?`<button onclick="selectGame('${x.id}',${i})">🎮 ADD / CHANGE GAME</button><button class="stop" onclick="stopPlayer('${x.id}',${i})">⏹ STOP</button>`:""}
+    </div>
+   </div>`
+  }).join("");
+  return `<div class="card"><h2>${x.id} · ${x.type}</h2><div class="rate">₹${x.rate}/hour · Up to ${x.players} players</div>${rows}<button style="margin-top:10px;width:100%" onclick="startAll('${x.id}')">▶ START ALL PLAYERS</button></div>`
+ }).join("");
+
+ document.getElementById("gameList").innerHTML=games.map(g=>`<div class="item row"><span><b>${g.name}</b> <span class="badge">${g.type}</span></span><button class="danger" style="width:auto" onclick="deleteGame(${g.id})">DELETE</button></div>`).join("");
+
+ bookStation.innerHTML=config.map(x=>`<option>${x.id}</option>`).join("");
+ document.getElementById("bookingList").innerHTML=bookings.slice().reverse().map(b=>`<div class="item row"><span><b>${b.name}</b> · ${b.station} · ${b.date} ${b.time} · ${b.hours} hr<br><span class="muted">${b.phone||""} · ${b.status}</span></span>${b.status==="Booked"?`<button style="width:auto" onclick="cancelBooking(${b.id})">CANCEL</button>`:""}</div>`).join("");
+
+ paymentSession.innerHTML=sessions.filter(s=>!s.paid).map((s,i)=>{if(s.idNum==null)s.idNum=sessions.indexOf(s)+1;return `<option value="${s.idNum}">${s.station} · ${s.game} · ${money(s.amount)}</option>`}).join("");
+ document.getElementById("paymentList").innerHTML=sessions.slice().reverse().map((s,i)=>{let idx=sessions.indexOf(s);if(s.idNum==null)s.idNum=idx+1;return `<div class="item row"><span><b>${s.station}</b> · ${s.game} · ${money(s.amount)}<br><span class="muted">${s.paid?"PAID · "+s.method:"PENDING"}</span></span>${!s.paid?`<button style="width:auto" onclick="openPay(${s.idNum})">PAY</button>`:`<span class="badge">PAID</span>`}</div>`}).join("");
+
+ document.getElementById("historyTable").innerHTML=sessions.slice().reverse().map(s=>`<tr><td>${s.station}</td><td>${s.game}</td><td>${new Date(s.start).toLocaleTimeString()}</td><td>${new Date(s.end).toLocaleTimeString()}</td><td>${dur(s.end-s.start)}</td><td>${money(s.amount)}</td><td>${s.paid?"Paid ("+s.method+")":"Pending"}</td></tr>`).join("");
+ save();
+}
+function login(){
+ if(loginUser.value==="admin"&&loginPass.value==="admin123"){sessionStorage.ygsLoggedIn="1";loginModal.classList.remove("show");render()}
+ else loginMsg.textContent="Wrong username or password.";
+}
+function logout(){sessionStorage.removeItem("ygsLoggedIn");location.reload()}
+if(sessionStorage.ygsLoggedIn!=="1")loginModal.classList.add("show");
+setInterval(render,1000);render();
+</script>
+</body>
+</html>
